@@ -6,6 +6,7 @@
 local playersService = game:GetService("Players")
 local inputService = game:GetService("UserInputService")
 local gameCamera = workspace.CurrentCamera
+local runService = game:GetService("RunService")
 
 -- Variáveis compartilhadas
 shared.VapeIndependent = shared.VapeIndependent or false
@@ -111,6 +112,53 @@ GUISettings.CreateSlider({
 local GUIbind = GUI.CreateGUIBind()
 
 -- ==========================================
+--               KILLAURA
+-- ==========================================
+local killAuraEnabled = false
+local killAuraRange = 15 -- alcance em studs
+local killAuraDamage = 10
+
+GUISettings.CreateToggle({
+	Name = "KillAura",
+	Function = function(callback)
+		killAuraEnabled = callback
+	end,
+	Default = false,
+	HoverText = "Automatically attacks nearby NPCs"
+})
+
+local function getClosestNPC()
+	local closest = nil
+	local shortestDist = killAuraRange
+	for _, npc in pairs(workspace:GetChildren()) do
+		if npc:FindFirstChild("Humanoid") and npc ~= playersService.LocalPlayer.Character then
+			local hrp = npc:FindFirstChild("HumanoidRootPart")
+			local playerHRP = playersService.LocalPlayer.Character and playersService.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if hrp and playerHRP then
+				local dist = (hrp.Position - playerHRP.Position).Magnitude
+				if dist < shortestDist then
+					shortestDist = dist
+					closest = npc
+				end
+			end
+		end
+	end
+	return closest
+end
+
+runService.RenderStepped:Connect(function()
+	if killAuraEnabled then
+		local target = getClosestNPC()
+		if target then
+			local humanoid = target:FindFirstChild("Humanoid")
+			if humanoid and humanoid.Health > 0 then
+				humanoid:TakeDamage(killAuraDamage)
+			end
+		end
+	end
+end)
+
+-- ==========================================
 --        TELEPORT E RE-EXECUÇÃO
 -- ==========================================
 if not shared.NoAutoExecute then
@@ -125,12 +173,8 @@ if not shared.NoAutoExecute then
 					loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/vapevoidware/main/NewMainScript.lua", true))()
 				end
 			]]
-			if shared.VapeDeveloper then
-				teleportScript = 'shared.VapeDeveloper = true\n'..teleportScript
-			end
-			if shared.VapePrivate then
-				teleportScript = 'shared.VapePrivate = true\n'..teleportScript
-			end
+			if shared.VapeDeveloper then teleportScript = 'shared.VapeDeveloper = true\n'..teleportScript end
+			if shared.VapePrivate then teleportScript = 'shared.VapePrivate = true\n'..teleportScript end
 			if shared.VapeCustomProfile then 
 				teleportScript = "shared.VapeCustomProfile = '"..shared.VapeCustomProfile.."'\n"..teleportScript
 			end
@@ -220,76 +264,4 @@ GUISettings.CreateButton2({
 	Function = function()
 		for i,v in pairs(GuiLibrary.ObjectsThatCanBeSaved) do
 			if (v.Type == "Window" or v.Type == "CustomWindow") then
-				v.Object.Position = (i == "GUIWindow" and UDim2.new(0, 6, 0, 6) or UDim2.new(0, 223, 0, 6))
-			end
-		end
-	end
-})
-
-GUISettings.CreateButton2({
-	Name = "SORT GUI", 
-	Function = function()
-		local sorttable = {}
-		local movedown = false
-		local sortordertable = {
-			GUIWindow = 1, CombatWindow = 2, BlatantWindow = 3, RenderWindow = 4,
-			UtilityWindow = 5, WorldWindow = 6, VoidwareWindow = 7, CustomScriptsWindow = 8,
-			FriendsWindow = 9, TargetsWindow = 10, ProfilesWindow = 11, ["Text GUICustomWindow"] = 12,
-			TargetInfoCustomWindow = 13, RadarCustomWindow = 14
-		}
-		local storedpos = {}
-		local num = 6
-		for i,v in pairs(GuiLibrary.ObjectsThatCanBeSaved) do
-			if v.Type == "Window" and v.Object.Visible then
-				local sortordernum = (sortordertable[i] or #sorttable)
-				sorttable[sortordernum] = v.Object
-			end
-		end
-		for i2,v2 in pairs(sorttable) do
-			if num > 1697 then
-				movedown = true
-				num = 6
-			end
-			v2.Position = UDim2.new(0, num, 0, (movedown and (storedpos[num] and (storedpos[num] + 9) or 400) or 39))
-			if not storedpos[num] then
-				storedpos[num] = v2.AbsoluteSize.Y
-				if v2.Name == "MainWindow" then storedpos[num] = 400 end
-			end
-			num = num + 223
-		end
-	end
-})
-
-GeneralSettings.CreateButton2({Name = "UNINJECT", Function = GuiLibrary.SelfDestruct})
-GeneralSettings.CreateButton2({Name = "RESTART", Function = GuiLibrary.Restart})
-
--- ==========================================
---               LOAD VAPE
--- ==========================================
-local function loadVape()
-	if not shared.VapeIndependent then
-		loadstring(vapeGithubRequest("Universal.lua"))()
-		-- Load Custom Modules
-		if isfile("vape/CustomModules/"..game.PlaceId..".lua") then
-			loadstring(readfile("vape/CustomModules/"..game.PlaceId..".lua"))()
-		end
-	else
-		repeat task.wait() until shared.VapeManualLoad
-	end
-
-	if #ProfilesTextList.ObjectList == 0 then
-		table.insert(ProfilesTextList.ObjectList, "default")
-		ProfilesTextList.RefreshValues(ProfilesTextList.ObjectList)
-	end
-
-	GuiLibrary.LoadSettings(shared.VapeCustomProfile)
-	GuiLibrary.UpdateUI(GUIColorSlider.Hue, GUIColorSlider.Sat, GUIColorSlider.Value, true)
-	shared.VapeFullyLoaded = true
-end
-
-if shared.VapeIndependent then
-	task.spawn(loadVape)
-else
-	loadVape()
-end
-
+				v.Object.Position = (
