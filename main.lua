@@ -1,105 +1,55 @@
--- Serviços
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
-
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-
--- Gui principal
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomPanel"
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Janela principal
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 250, 0, 150)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
--- Título
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundTransparency = 1
-Title.Text = "Painel de Cheats"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.Parent = MainFrame
-
--- Função para criar botões
-local function CreateButton(name, posY, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 200, 0, 30)
-    btn.Position = UDim2.new(0, 25, 0, posY)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = name.." [OFF]"
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 16
-    btn.Parent = MainFrame
-
-    local enabled = false
-    btn.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        btn.Text = name.." ["..(enabled and "ON" or "OFF").."]"
-        callback(enabled)
-    end)
+-- Função que retorna true se o jogador estiver segurando o machado velho
+local function IsHoldingAxe()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Tool") then
+        return char.Tool.Name == "OldAxe" -- nome do machado velho
+    end
+    return false
 end
 
--- Kill Aura real usando machado
+-- Função Kill Aura
 local KillAuraEnabled = false
-local AttackRange = 10 -- raio em studs
-local DamageAmount = 25 -- dano do machado
+local function KillAura()
+    if not KillAuraEnabled then return end
+    if not IsHoldingAxe() then return end
 
-CreateButton("Kill Aura", 50, function(state)
-    KillAuraEnabled = state
+    local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
+
+    for i, obj in pairs(workspace:GetChildren()) do
+        -- NPC humanoid
+        if obj:FindFirstChild("Humanoid") then
+            local playerCheck = game.Players:GetPlayerFromCharacter(obj)
+            if not playerCheck then
+                -- dano ao NPC
+                obj.Humanoid:TakeDamage(15)
+            end
+        -- Árvores ou árvores de madeira
+        elseif obj.Name == "Tree" or obj.Name == "WoodTree" then
+            if obj:FindFirstChild("Health") then
+                obj.Health.Value = math.max(obj.Health.Value - 15, 0)
+            end
+        end
+    end
+end
+
+-- Botão Kill Aura
+local killAuraButton = Instance.new("TextButton")
+killAuraButton.Size = UDim2.new(0, 120, 0, 30)
+killAuraButton.Position = UDim2.new(0, 10, 0, 140)
+killAuraButton.Text = "Kill Aura"
+killAuraButton.Parent = GuiLibrary.MainGui
+killAuraButton.MouseButton1Click:Connect(function()
+    KillAuraEnabled = not KillAuraEnabled
+    killAuraButton.BackgroundColor3 = KillAuraEnabled and Color3.new(0, 0.7, 0) or Color3.new(1, 0, 0)
 end)
 
--- Loop Kill Aura
-RunService.RenderStepped:Connect(function()
-    if KillAuraEnabled then
-        for _, npc in pairs(Workspace:GetDescendants()) do
-            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
-                local humanoid = npc.Humanoid
-                local root = npc.HumanoidRootPart
-                if humanoid.Health > 0 and (root.Position - player.Character.HumanoidRootPart.Position).Magnitude <= AttackRange then
-                    -- Aplica dano
-                    humanoid:TakeDamage(DamageAmount)
-                end
-            end
+-- Loop Kill Aura automático
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if KillAuraEnabled then
+            KillAura()
         end
     end
 end)
 
--- Draggable da janela
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
