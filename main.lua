@@ -1,3 +1,4 @@
+-- Painel Kill Aura para Delta Executor
 local killAuraAtivado = false
 local intensidade = 80
 local alcanceKillAura = 500
@@ -14,26 +15,32 @@ local function atualizarStatus()
     end
 end
 
--- Função Kill Aura
+-- Kill Aura usando machado
 local function executarKillAura()
     task.spawn(function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local backpack = player:WaitForChild("Backpack")
+        local tool = backpack:FindFirstChild("Machado") or character:FindFirstChild("Machado")
+        if not tool then
+            warn("Machado não encontrado!")
+            return
+        end
+
+        tool.Parent = character
+        player.Character.Humanoid:EquipTool(tool)
+
         while killAuraAtivado do
-            local player = game.Players.LocalPlayer
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local hrp = character.HumanoidRootPart
-                
-                -- Loop por todos os modelos do Workspace
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
                 for _, obj in pairs(workspace:GetDescendants()) do
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
-                        
-                        -- Ignorar se for um player
                         local dono = game.Players:GetPlayerFromCharacter(obj)
                         if not dono then
                             local distancia = (hrp.Position - obj.HumanoidRootPart.Position).Magnitude
                             if distancia <= alcanceKillAura then
+                                tool:Activate()
                                 obj.Humanoid:TakeDamage(intensidade)
-                                print("Atacando NPC: " .. obj.Name .. " à distância " .. math.floor(distancia))
                             end
                         end
                     end
@@ -52,7 +59,7 @@ local function curar()
     atualizarStatus()
 end
 
--- Função Teleportar até NPC "Crianca"
+-- Teleporte para NPC "Crianca"
 local function teleportarCrianca()
     local player = game.Players.LocalPlayer
     local crianca = workspace:FindFirstChild("Crianca")
