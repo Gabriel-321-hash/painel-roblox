@@ -1,4 +1,6 @@
--- main.lua
+-- main.lua - Painel Delta funcional
+loadstring(game:HttpGet("https://github.com/Gabriel-321-hash/painel-roblox/raw/main/GuiLibrary.lua"))()
+
 local GuiLibrary = shared.GuiLibrary
 local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
