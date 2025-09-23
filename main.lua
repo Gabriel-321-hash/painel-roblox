@@ -1,4 +1,4 @@
--- main.lua - Compatível com GuiLibrary.lua do seu repositório
+-- main.lua - Integrado com GuiLibrary.lua simplificado
 local GuiLibrary = shared.GuiLibrary
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -82,19 +82,28 @@ local function pullScrap()
 end
 
 -- Criando a GUI
-local mainTab = GuiLibrary["CreateWindow"]("DeltaPainel")
-local combatTab = mainTab["CreateTab"]("Combate")
-local resourcesTab = mainTab["CreateTab"]("Recursos")
+local mainWindow = GuiLibrary:CreateWindow("DeltaPainel")
 
--- Botões
-combatTab["CreateButton"]("Kill Aura", function()
-    killAuraEnabled = not killAuraEnabled
-end)
+-- Combate
+mainWindow:CreateToggle({
+    Name = "Kill Aura",
+    Function = function(state)
+        killAuraEnabled = state
+    end
+})
 
-resourcesTab["CreateButton"]("Puxar Madeira", pullWood)
-resourcesTab["CreateButton"]("Puxar Sucata", pullScrap)
+-- Recursos
+mainWindow:CreateButton({
+    Name = "Puxar Madeira",
+    Function = pullWood
+})
 
--- Loop de RenderStepped para Kill Aura
+mainWindow:CreateButton({
+    Name = "Puxar Sucata",
+    Function = pullScrap
+})
+
+-- Loop para Kill Aura
 RunService.RenderStepped:Connect(function()
     if killAuraEnabled then
         killAura()
