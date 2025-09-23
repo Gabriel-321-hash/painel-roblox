@@ -3,12 +3,13 @@ local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 local debris = game:GetService("Debris")
 local workspace = game:GetService("Workspace")
+local players = game:GetService("Players")
 
 -- CONFIGURAÇÕES
 local reach = 100 -- Alcance do Kill Aura
 local axeName = "Machado Velho" -- Nome do machado
 
--- Criação da GUI simples (estilo Voidware)
+-- Criação da GUI simples
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "DeltaPainel"
 
@@ -43,18 +44,20 @@ runService.RenderStepped:Connect(function()
     if killAuraEnabled and hasAxeEquipped() and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = player.Character.HumanoidRootPart
         for _, obj in pairs(workspace:GetDescendants()) do
-            -- NPC humanoid
+            -- Ataca NPC humanoid, mas ignora players
             if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
-                local dist = (obj.HumanoidRootPart.Position - hrp.Position).Magnitude
-                if dist <= reach then
-                    obj.Humanoid:TakeDamage(10)
+                local isPlayer = players:FindFirstChild(obj.Name)
+                if not isPlayer then
+                    local dist = (obj.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    if dist <= reach then
+                        obj.Humanoid:TakeDamage(10)
+                    end
                 end
             end
             -- Árvores
             if obj:IsA("Model") and obj.Name:find("Tree") and obj.PrimaryPart then
                 local dist = (obj.PrimaryPart.Position - hrp.Position).Magnitude
                 if dist <= reach then
-                    -- Remove árvore e cria drop
                     obj:Destroy()
                     local log = Instance.new("Part")
                     log.Size = Vector3.new(2,2,2)
