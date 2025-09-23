@@ -1,119 +1,104 @@
--- main.lua - Painel Delta Funcional
-
--- Requer GuiLibrary
-local GuiLibrary = require(game.ReplicatedStorage:WaitForChild("GuiLibrary"))
-
--- Serviços
+-- main.lua - Compatível com GuiLibrary.lua do seu repositório
+local GuiLibrary = shared.GuiLibrary
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")
 
--- ======= KillAura Module =======
-local KillAura = {}
-KillAura.Enabled = false
-KillAura.Reach = 50 -- alcance inicial
-KillAura.AxeName = "Machado Velho"
-KillAura.OnlyNPCs = true -- só atacar NPCs e animais
+local localPlayer = Players.LocalPlayer
+local axeName = "Machado Velho" -- Nome do machado
+local reach = 100 -- Alcance do Kill Aura
+local killAuraEnabled = false
 
-function KillAura:HasAxeEquipped()
-    local char = LocalPlayer.Character
+-- Função para verificar se o machado está equipado
+local function hasAxeEquipped()
+    local char = localPlayer.Character
     if not char then return false end
     local tool = char:FindFirstChildOfClass("Tool")
-    return tool and tool.Name == self.AxeName
+    return tool and tool.Name == axeName
 end
 
-function KillAura:IsTarget(obj)
-    if self.OnlyNPCs then
+-- Função para obter NPCs ou árvores dentro do alcance
+local function getTargets()
+    local targets = {}
+    if not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then return targets end
+    local hrp = localPlayer.Character.HumanoidRootPart
+
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        local objPos
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
-            -- Ignora players
-            return not Players:FindFirstChild(obj.Name)
+            objPos = obj.HumanoidRootPart.Position
         elseif obj.Name == "Tree" or obj.Name == "Log" then
-            return true
+            objPos = obj.Position
         end
-        return false
-    else
-        return obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart")
+
+        if objPos and (hrp.Position - objPos).Magnitude <= reach then
+            table.insert(targets, obj)
+        end
     end
+
+    return targets
 end
 
-function KillAura:Start()
-    RunService.RenderStepped:Connect(function()
-        if self.Enabled and self:HasAxeEquipped() and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if self:IsTarget(obj) then
-                    local pos
-                    if obj:IsA("Model") and obj:FindFirstChild("HumanoidRootPart") then
-                        pos = obj.HumanoidRootPart.Position
-                    elseif obj:IsA("BasePart") then
-                        pos = obj.Position
-                    elseif obj:IsA("Model") and obj.PrimaryPart then
-                        pos = obj.PrimaryPart.Position
-                    end
-
-                    if pos then
-                        local dist = (pos - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                        if dist <= self.Reach then
-                            -- Dano ou destruição
-                            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
-                                obj.Humanoid:TakeDamage(10)
-                            elseif obj:IsA("BasePart") or (obj:IsA("Model") and obj.PrimaryPart) then
-                                obj:Destroy()
-                                local drop = Instance.new("Part")
-                                drop.Size = Vector3.new(2,2,2)
-                                drop.Position = LocalPlayer.Character.HumanoidRootPart.Position + LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector * 5
-                                drop.Anchored = false
-                                drop.Parent = workspace
-                                Debris:AddItem(drop, 30)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- ======= PullResources Module =======
-local PullResources = {}
-function PullResources:Pull(resourceNames)
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if table.find(resourceNames, obj.Name) then
-                if obj:IsA("BasePart") then
-                    obj.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector * 5
-                elseif obj:IsA("Model") and obj.PrimaryPart then
-                    obj:SetPrimaryPartCFrame(LocalPlayer.Character.HumanoidRootPart.CFrame + LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector * 5)
-                end
+-- Função de Kill Aura
+local function killAura()
+    if killAuraEnabled and hasAxeEquipped() then
+        for _, target in pairs(getTargets()) do
+            if target:IsA("Model") and target:FindFirstChild("Humanoid") then
+                target.Humanoid:TakeDamage(10)
+            elseif target.Name == "Tree" or target.Name == "Log" then
+                local pos = localPlayer.Character.HumanoidRootPart.Position + localPlayer.Character.HumanoidRootPart.CFrame.LookVector * 5
+                target:Destroy()
+                local log = Instance.new("Part")
+                log.Size = Vector3.new(2,2,2)
+                log.Position = pos
+                log.Anchored = false
+                log.Parent = Workspace
+                Debris:AddItem(log, 30)
             end
         end
     end
 end
 
--- ======= Criando GUI =======
-local screenGui = GuiLibrary:CreateScreenGui("DeltaPainel")
+-- Funções para puxar recursos
+local function pullWood()
+    local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj.Name == "Log" then
+            obj.Position = hrp.Position + hrp.CFrame.LookVector * 5
+        end
+    end
+end
 
--- Kill Aura Toggle
-local killBtn = GuiLibrary:CreateButton("Kill Aura", UDim2.new(0,10,0,10), function()
-    KillAura.Enabled = not KillAura.Enabled
+local function pullScrap()
+    local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj.Name == "Parafuso" or obj.Name == "Sucata" then
+            obj.Position = hrp.Position + hrp.CFrame.LookVector * 5
+        end
+    end
+end
+
+-- Criando a GUI
+local mainTab = GuiLibrary["CreateWindow"]("DeltaPainel")
+local combatTab = mainTab["CreateTab"]("Combate")
+local resourcesTab = mainTab["CreateTab"]("Recursos")
+
+-- Botões
+combatTab["CreateButton"]("Kill Aura", function()
+    killAuraEnabled = not killAuraEnabled
 end)
 
--- Alcance Slider
-GuiLibrary:CreateSlider("Alcance KillAura", 10, 200, KillAura.Reach, UDim2.new(0,10,0,60), function(value)
-    KillAura.Reach = value
+resourcesTab["CreateButton"]("Puxar Madeira", pullWood)
+resourcesTab["CreateButton"]("Puxar Sucata", pullScrap)
+
+-- Loop de RenderStepped para Kill Aura
+RunService.RenderStepped:Connect(function()
+    if killAuraEnabled then
+        killAura()
+    end
 end)
 
-KillAura:Start()
-
--- Puxar Madeira Button
-GuiLibrary:CreateButton("Puxar Madeira", UDim2.new(0,10,0,110), function()
-    PullResources:Pull({"Log","Tree"})
-end)
-
--- Puxar Sucata Button
-GuiLibrary:CreateButton("Puxar Sucata", UDim2.new(0,10,0,160), function()
-    PullResources:Pull({"Parafuso","Sucata"})
-end)
-
-print("Painel Delta carregado!")
+print("DeltaPainel carregado!")
