@@ -1,4 +1,4 @@
--- Delta Auto-Painel Script
+-- Delta Auto-Painel Refinado
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -7,7 +7,7 @@ local Debris = game:GetService("Debris")
 
 local player = Players.LocalPlayer
 
--- Função para criar ModuleScript automaticamente
+-- Cria módulo automaticamente se não existir
 local function createModule(name, source)
     local module = ReplicatedStorage:FindFirstChild(name)
     if not module then
@@ -19,7 +19,7 @@ local function createModule(name, source)
     return require(module)
 end
 
--- Criando GuiLibrary
+-- GuiLibrary
 local GuiLibrary = createModule("GuiLibrary", [[
 shared.GuiLibrary = shared.GuiLibrary or {}
 local GuiLibrary = shared.GuiLibrary
@@ -78,7 +78,7 @@ end
 return GuiLibrary
 ]])
 
--- Criando BaseModule
+-- BaseModule
 local BaseModule = createModule("BaseModule", [[
 local BaseModule = {}
 
@@ -99,7 +99,12 @@ end
 return BaseModule
 ]])
 
--- Criando painel
+-- Configurações
+local KILL_AURA_RANGE = 50 -- Alcance do Kill Aura
+local KILL_AURA_DAMAGE = 10 -- Dano aplicado
+local AXE_NAME = "Machado Velho"
+
+-- Cria painel
 local window = GuiLibrary:CreateWindow("Painel Delta")
 
 -- Kill Aura
@@ -130,20 +135,23 @@ window:CreateButton{
 -- Loop Kill Aura
 RunService.RenderStepped:Connect(function()
     if killAuraEnabled then
-        if player.Character and player.Character:FindFirstChildOfClass("Tool") and player.Character:FindFirstChildOfClass("Tool").Name == "Machado Velho" then
+        local char = player.Character
+        if char and char:FindFirstChildOfClass("Tool") and char:FindFirstChildOfClass("Tool").Name == AXE_NAME then
             for _, npc in pairs(workspace:GetDescendants()) do
+                -- NPC Humanoid
                 if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
-                    local dist = (npc.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                    if dist <= 50 then
-                        BaseModule:TakeDamage(npc,10)
+                    local dist = (npc.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+                    if dist <= KILL_AURA_RANGE then
+                        BaseModule:TakeDamage(npc,KILL_AURA_DAMAGE)
                     end
+                -- Árvores e Logs
                 elseif npc.Name == "Tree" or npc.Name == "Log" then
-                    local dist = (npc.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                    if dist <= 50 then
+                    local dist = (npc.Position - char.HumanoidRootPart.Position).Magnitude
+                    if dist <= KILL_AURA_RANGE then
                         npc:Destroy()
                         local log = Instance.new("Part")
                         log.Size = Vector3.new(2,2,2)
-                        log.Position = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector*5
+                        log.Position = char.HumanoidRootPart.Position + char.HumanoidRootPart.CFrame.LookVector*5
                         log.Anchored = false
                         log.Parent = workspace
                         Debris:AddItem(log,30)
