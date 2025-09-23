@@ -25,7 +25,7 @@ function GuiLibrary:CreateWindow(name)
         btn.Text = toggle.Name
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("ScreenGui") or Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
+        btn.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ScreenGui") or Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
         btn.MouseButton1Click:Connect(function()
             toggle.State = not toggle.State
             toggle.Callback(toggle.State)
@@ -48,7 +48,7 @@ function GuiLibrary:CreateWindow(name)
         btn.Text = button.Name
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("ScreenGui") or Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
+        btn.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ScreenGui") or Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
         btn.MouseButton1Click:Connect(function()
             button.Callback()
         end)
